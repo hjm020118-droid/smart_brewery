@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>막걸리 스마트 브루어리</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: 'Pretendard', sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #fcfbf9; 
+            color: #333;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 600px; 
+        }
+
+        .header { margin-bottom: 30px; }
+        .header h1 { font-size: 24px; margin: 0 0 5px 0; }
+        .header p { color: #888; font-size: 14px; margin: 0; }
+
+        .card { 
+            background: white; 
+            border: 1px solid #eaeaea; 
+            border-radius: 12px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .card h2 { font-size: 16px; margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;}
+
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .data-box { display: flex; align-items: center; gap: 12px; }
+        .icon { font-size: 24px; background: #f0f4f8; padding: 10px; border-radius: 50%; }
+        .data-info .label { font-size: 12px; color: #888; display: block; margin-bottom: 4px;}
+        .data-info .value { font-size: 18px; font-weight: bold; }
+
+        .input-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .input-row .input-group { flex: 1; }
+        .input-group label { font-size: 12px; color: #666; display: block; margin-bottom: 8px; }
+        .input-group input, .input-group select { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; background: #fdfdfd;
+            font-size: 14px;
+        }
+
+        .btn-group { display: flex; gap: 10px; }
+        .btn-primary { 
+            flex: 2; background: #0b1120; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-primary:hover { background: #1e293b; }
+        .btn-secondary {
+            flex: 1; background: white; color: #333; border: 1px solid #ddd; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer;
+        }
+        .btn-danger { 
+            flex: 1; background: #ef4444; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-danger:hover { background: #dc2626; }
+        .mode-grid {
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+            gap: 12px;
+        }
+        .mode-card {
+            background: #ffffff; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 16px; 
+            padding: 16px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .mode-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.06);
+        }
+        .mode-card.active {
+            background: #f1f5f9 !important;
+            border-color: #0b1120 !important;
+            box-shadow: 0 4px 12px rgba(11, 17, 32, 0.08) !important;
+            transform: scale(1.02);
+        }
+
+        .chart-scroll-wrapper {
+            width: 100%; overflow-x: auto; white-space: nowrap; margin-top: 10px;
+            border-radius: 8px; background: #fafafa; border: 1px solid #f0f0f0;
+        }
+        .chart-area-box {
+            position: relative; height: 220px; min-width: 100%;
+        }
+
+        .chart-scroll-wrapper::-webkit-scrollbar { height: 6px; }
+        .chart-scroll-wrapper::-webkit-scrollbar-track { background: #f1f1f1; }
+        .chart-scroll-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        .toast-popup {
+            position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 20px);
+            background: rgba(11, 17, 32, 0.9); color: white; padding: 12px 24px;
+            border-radius: 30px; font-size: 14px; font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); opacity: 0; visibility: hidden;
+            transition: all 0.3s ease; z-index: 9999; display: flex; align-items: center; gap: 8px;
+        }
+        .toast-popup.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍶 막걸리 스마트 브루어리</h1>
+            <p>실시간 발효 모니터링 및 제어 시스템</p>
+        </div>
+
+        <div class="card">
+            <h2>📊 실시간 발효 모니터</h2>
+            <div class="monitor-grid">
+                <div class="data-box">
+                    <div class="icon" style="color: #ff9800; background: #fff3e0;">🌡️</div>
+                    <div class="data-info">
+                        <span class="label">현재 온도</span>
+                        <span id="curr_temp" class="value">--</span><span class="value">°C</span>
+                    </div>
+                </div>
+                <div class="data-box">
+                    <div class="icon" style="color: #2196f3; background: #e3f2fd;">💧</div>
+                    <div class="data-info">
+                        <span class="label">알코올 도수 (ABV)</span>
+                        <span id="curr_abv" class="value">--</span><span class="value">%</span>
+                    </div>
+                </div>
+                <div class="data-box">
+                    <div class="icon" style="color: #9c27b0; background: #f3e5f5;">⏱️</div>
+                    <div class="data-info">
+                        <span class="label">경과 시간</span>
+                        <span id="uptime" class="value">--:--:--</span>
+                    </div>
+                </div>
+                <div class="data-box">
+                    <div class="icon" style="color: #4caf50; background: #e8f5e9;">🔄</div>
+                    <div class="data-info">
+                        <span class="label">마지막 교반</span>
+                        <span id="last_stir" class="value">측정중</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎯 스마트 발효 모드 선택</h2>
+            <div class="mode-grid">
+                <div class="mode-card" id="mode-standard" onclick="selectBrewingMode('standard', '표준 상온', 25, 3)">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">🌾</div>
+                    <div style="font-size: 0.95rem; font-weight: bold; color: #222; margin-bottom: 4px;">표준 상온</div>
+                    <div style="font-size: 0.75rem; color: #777;">25°C | 일반 발효</div>
+                </div>
+                <div class="mode-card" id="mode-dynamic" onclick="selectBrewingMode('dynamic', '다이내믹 변온', 22, 4)">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">⚡</div>
+                    <div style="font-size: 0.95rem; font-weight: bold; color: #222; margin-bottom: 4px;">다이내믹 변온</div>
+                    <div style="font-size: 0.75rem; color: #777;">22°C | 가변 제어</div>
+                </div>
+                <div class="mode-card" id="mode-premium" onclick="selectBrewingMode('premium', '프리미엄 저온', 15, 2)">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">❄️</div>
+                    <div style="font-size: 0.95rem; font-weight: bold; color: #222; margin-bottom: 4px;">프리미엄 저온</div>
+                    <div style="font-size: 0.75rem; color: #777;">15°C | 고급 청주형</div>
+                </div>
+                <div class="mode-card" id="mode-carbon" onclick="selectBrewingMode('carbon', '고속 탄산', 28, 5)">
+                    <div style="font-size: 1.8rem; margin-bottom: 8px;">🫧</div>
+                    <div style="font-size: 0.95rem; font-weight: bold; color: #222; margin-bottom: 4px;">고속 탄산</div>
+                    <div style="font-size: 0.75rem; color: #777;">28°C | 스파클링</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📈 실시간 온도 변화 추이 (1분 주기)</h2>
+            <p style="font-size:11px; color:#999; margin:-10px 0 10px 0;">💡 데이터가 많아지면 좌우로 밀어서 과거 내역을 볼 수 있습니다.</p>
+            <div class="chart-scroll-wrapper" id="chartWrapper">
+                <div class="chart-area-box" id="chartArea">
+                    <canvas id="tempTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>⚙️ 제어 세부 설정</h2>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>희망 온도 (°C)</label>
+                    <input type="number" id="target_temp_input" value="25">
+                </div>
+                <div class="input-group">
+                    <label>하루 교반 횟수</label>
+                    <select id="stir_count_select">
+                        <option value="1">1회</option>
+                        <option value="2">2회</option>
+                        <option value="3" selected>3회</option>
+                        <option value="4">4회</option>
+                        <option value="5">5회</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="updateSettings()">설정 적용하기</button>
+                <button class="btn-secondary" onclick="forceStirNow()">즉시 교반하기</button>
+                <button class="btn-danger" onclick="stopSystem()">작동 중지</button>
+                <button class="btn-secondary" style="color: #d32f2f;" onclick="resetHistory()">데이터초기화</button>
+            </div>
+        </div>
+        
+    </div>
+
+    <div id="toast" class="toast-popup">
+        <span id="toast-icon">✨</span>
+        <span id="toast-text">모드가 변경되었습니다.</span>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+
+    <script>
+        let selectedMode = 'custom'; 
+        let tempChart; 
+
+        //Firebase 설정값
+        const firebaseConfig = {
+            apiKey: "AIzaSyAP3rIuuAp_685KbZUupy1gB4eynqnTbjk",
+            authDomain: "smart11-f49d9.firebaseapp.com",
+            databaseURL: "https://smart11-f49d9-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "smart11-f49d9",
+            storageBucket: "smart11-f49d9.firebasestorage.app",
+            messagingSenderId: "938534435163",
+            appId: "1:938534435163:web:7255b1338c9d5a3c52027e",
+            measurementId: "G-T9PEZX449S"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function initTemperatureChart() {
+            const ctx = document.getElementById('tempTrendChart').getContext('2d');
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '온도 (°C)',
+                        data: [],
+                        borderColor: '#0b1120', 
+                        backgroundColor: 'rgba(98, 0, 238, 0.04)', 
+                        borderWidth: 3,
+                        pointBackgroundColor: '#6200EE', 
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.3, 
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 10, max: 35, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#777' } }
+                    }
+                }
+            });
+
+            // 스크롤 넓이 강제 지정 
+            document.getElementById('chartArea').style.width = '1350px';
+            tempChart.resize();
+        }
+
+        initTemperatureChart();
+
+
+        // 1. [모니터링 트랙] 텍스트 정보 (온도, 도수 등) 실시간 수신 (그래프 코드 제거됨)
+
+        const monitoringRef = db.ref('brewery_device_01/monitoring');
+        monitoringRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                document.getElementById('curr_temp').innerText = data.temperature !== undefined ? data.temperature : '--';
+                document.getElementById('curr_abv').innerText = data.abv !== undefined ? data.abv : '--';
+                document.getElementById('uptime').innerText = data.elapsed_time || '--:--:--';
+                if(data.last_stir_time) {
+                    document.getElementById('last_stir').innerText = data.last_stir_time;
+                }
+            }
+        });
+
+
+        // 2. 과거 그래프 기록 한 번에 불러오기 & 실시간 추가
+
+        const historyRef = db.ref('brewery_device_01/history');
+        historyRef.limitToLast(30).on('child_added', (snapshot) => {
+            const data = snapshot.val();
+            if(data && data.time && data.temp) {
+                tempChart.data.labels.push(data.time);
+                tempChart.data.datasets[0].data.push(Number(data.temp));
+
+                if (tempChart.data.labels.length > 30) {
+                    tempChart.data.labels.shift();       
+                    tempChart.data.datasets[0].data.shift(); 
+                }
+                
+                tempChart.update(); 
+                
+                const wrapper = document.getElementById('chartWrapper');
+                wrapper.scrollLeft = wrapper.scrollWidth; // 오른쪽으로 자동 스크롤
+            }
+        });
+
+        // 3. 과거 기록 싹 지우기
+        function resetHistory() {
+            if(confirm("기존 그래프 기록을 모두 지우고 완전히 새로 시작하시겠습니까?")) {
+                db.ref('brewery_device_01/history').remove().then(() => {
+                    // 화면상의 차트 데이터 강제 초기화
+                    tempChart.data.labels = [];
+                    tempChart.data.datasets[0].data = [];
+                    tempChart.update();
+                    showToastPopup('과거 발효 기록이 모두 초기화되었습니다.');
+                });
+            }
+        }
+
+        // 2. 발효 모드 클릭 연동
+        function selectBrewingMode(modeId, modeTitle, temp, stir) {
+            selectedMode = modeId;
+            const cards = document.querySelectorAll('.mode-card');
+            cards.forEach(card => card.classList.remove('active'));
+
+            const targetCard = document.getElementById(`mode-${modeId}`);
+            if(targetCard) targetCard.classList.add('active');
+
+            document.getElementById('target_temp_input').value = temp;
+            document.getElementById('stir_count_select').value = stir;
+
+            let emoji = '🌾';
+            if(modeId === 'dynamic') emoji = '⚡';
+            else if(modeId === 'premium') emoji = '❄️';
+            else if(modeId === 'carbon') emoji = '🫧';
+
+            showToastPopup(emoji, `[${modeTitle} 모드] 수치가 입력되었습니다.`);
+        }
+
+        // 3. 팝업 알림
+        function showToastPopup(emoji, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-icon').innerText = emoji;
+            document.getElementById('toast-text').innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 2300);
+        }
+
+        // 4. 설정 적용
+        function updateSettings() {
+            const targetTemp = document.getElementById('target_temp_input').value;
+            const stirCount = document.getElementById('stir_count_select').value;
+
+            db.ref('brewery_device_01/control').set({
+                target_temperature: Number(targetTemp),
+                stir_frequency: Number(stirCount),
+                current_mode: selectedMode  
+            }).then(() => {
+                showToastPopup('🚀', '기기에 설정값이 무사히 전송되었습니다!');
+            }).catch((error) => {
+                console.error("전송 에러 발생:", error);
+                alert("네트워크 장애로 전송에 실패했습니다.");
+            });
+        }
+
+        // 5. 즉시 교반
+        function forceStirNow() {
+            db.ref('brewery_device_01/control').update({
+                force_stir_trigger: Date.now() 
+            }).then(() => {
+                showToastPopup('🌀', '기기에 즉시 교반 명령을 내렸습니다!');
+                const stirElement = document.getElementById('last_stir');
+                stirElement.innerText = '방금 전';
+                stirElement.style.color = '#2196f3';
+            }).catch((error) => {
+                console.error("전송 에러 발생:", error);
+            });
+        }
+
+        // 6. 시스템 작동 중지
+        function stopSystem() {
+            // 실수로 누르는 것을 방지하기 위해 경고창 띄우기
+            if(confirm("정말 발효를 중지하고 기기를 대기 상태로 만들까요?")) {
+                db.ref('brewery_device_01/control').update({
+                    system_command: 'STOP',
+                    command_trigger: Date.now()
+                }).then(() => {
+                    showToastPopup('🛑', '시스템 가동을 전면 중지합니다.');
+                }).catch((error) => {
+                    console.error("전송 에러 발생:", error);
+                });
+            }
+        }
+
+    </script>
+</body>
+</html>
